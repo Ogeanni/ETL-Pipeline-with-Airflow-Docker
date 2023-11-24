@@ -5,13 +5,14 @@ import decimal
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.decorators import dag, task
 
-
+# Define default arguments for the DAG
 default_args = {
     'owner': 'Ogechi',
     'retries': 5,
     'retry_delay': timedelta(minutes=2)
 }
 
+# Define the DAG with the specified parameters
 @dag(
     default_args=default_args,
     dag_id='Bank_of_Canada_Exchange_rate',
@@ -20,8 +21,9 @@ default_args = {
     template_searchpath='/tmp'
 )
 
-
+# Define a taskflow
 def taskflow():
+    # Define the extract_data from the API
     @task
     def extract_data():
         start_date = '2023-01-01'
@@ -42,6 +44,7 @@ def taskflow():
         return rates
 
     @task
+    #Write an SQL INSERRT query and save it in a file
     def load_data(data):
         with open('/tmp/postgres_query.sql', 'w') as f:
             for dat, usd, aud, gbp, eur in data:
@@ -49,7 +52,7 @@ def taskflow():
                     "INSERT INTO exchange (date, fxusdcad, fxaudcad, fxgbpcad, fxeurcad) \
                     VALUES("f'\'{dat}\', {usd}, {aud}, {gbp}, {eur}'");\n"
                 )
-
+    #Create a table in Postgres
     create_table_in_postgres = PostgresOperator(
         task_id='create_table',
         postgres_conn_id='postgres_localhost2',
@@ -63,7 +66,7 @@ def taskflow():
                 fxeurcad decimal )
         """
     )
-
+    #Load the data to Postgres
     load_data_to_postgres = PostgresOperator(
         task_id='load_data_into_postgres',
         postgres_conn_id='postgres_localhost2',
